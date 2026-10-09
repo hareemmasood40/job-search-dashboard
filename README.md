@@ -13,18 +13,34 @@ stays current.
 - **Applications by Status** — how many applications are Applied, Rejected, Interview
   Scheduled, etc.
 - **Applications over Time** — when I actually applied, so I can see the pace of my search
+- **Response Rate %** — a DAX measure showing what percentage of my outreach messages got
+  any kind of response
 
-![Job search dashboard showing applications by status and over time](dashboard_screenshot.png)
+![Job search dashboard showing applications by status, over time, and outreach response rate](dashboard_screenshot.png)
 
 ## Tools
-Power BI Desktop, Power Query (for cleaning the source data)
+Power BI Desktop, Power Query (for cleaning the source data), DAX (for custom measures)
 
 ## How it works
 1. Connects directly to `06_applications/application_tracker.xlsx` (Applications and
    Outreach sheets)
 2. Power Query cleans the data on load — the biggest fix needed was converting date columns
    from raw Excel serial numbers (e.g. `46291`) into actual dates
-3. Visuals are built from the cleaned tables, and refresh automatically from the source file
+3. Two DAX measures do the real calculation work rather than relying on Power BI's automatic
+   aggregation:
+   ```
+   Total Applications = COUNTROWS(Applications)
+
+   Response Rate % = DIVIDE(
+       CALCULATE(COUNTROWS(Outreach), Outreach[Reply?] <> "Waiting"),
+       COUNTROWS(Outreach)
+   )
+   ```
+   `Response Rate %` filters the Outreach table down to messages that got any response,
+   counts them, and safely divides by the total sent — `DIVIDE` returns a blank instead of
+   an error if there's ever nothing to divide by.
+4. Visuals are built from the cleaned tables and measures, and refresh automatically from
+   the source file
 
 ## A real problem I ran into and fixed
 Excel dates often import into Power BI as plain numbers rather than dates, because of how
@@ -33,6 +49,8 @@ column in Power Query before the visuals could use them properly — a good remi
 raw data rarely arrives ready to use.
 
 ## What I'd do next
-- Add a card showing outreach emails sent vs. replies received
-- Add a response-rate measure (percentage of applications that got any reply)
+- Build a proper data model: relate the Applications and Outreach tables so they can be
+  filtered together, rather than treating them as two separate tables
+- Add an application-side response rate too (percentage of applications that got any reply,
+  not just outreach)
 - Refresh this as my application count grows, to see real trends over a longer period
